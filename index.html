@@ -19,8 +19,12 @@
     <input id="geolat" type="number" value="53.53" placeholder="Breite">
 
     <h4>Sternkoordinaten (Rektaszension Deklination)</h4>
-    <input id="starpos" type="string" value="04h35m55.24s +16d30m33.5s" placeholder="Aldebaran = 04h35m55s +16d30m">
+    <label for="refstar">Referenzstern:</label>
+    <select name="refstar" id="refstar"></select>
 
+    <input id="starpos" type="string" value=" " placeholder="Aldebaran = 04h35m55s +16d30m">
+    <br>
+    
     <br><br>
     <button id="convertbutton" py-click="convert()" disabled>Finde den Mond</button>
     <br><br>

@@ -1,6 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-# Version 0.1 by Derek Homeier <dhomeie@gwdg.de>,
+# Version 0.2 by Derek Homeier <dhomeie@gwdg.de>,
 # based on `coordinates-with-pyscript` by Erik Tollerud <erik.tollerud@gmail.com>
 
 # this is needed for conversions that need IERS data
@@ -16,6 +16,17 @@ from astropy.utils.iers.iers import IERSWarning
 
 import warnings
 
+def populate_dropdowns(elem):
+    # Hardcode some star names as connecting to CDS seems problematic under PyScript
+    star_names = {'Aldebaran': '04h35m55.2390696s +16d30m33.4884636s',
+                  'Hamal': '02h07m10.405704s +23d27m44.70318s',
+                  'Regulus': '10h08m22.31098512s +11d58m01.9515936s'}
+
+    select_options = [f'<option value="{pos}">{nm}</option>' for nm, pos in star_names.items()]
+    
+    elem.innerHTML = select_options
+
+
 datein = Element("date")
 timein = Element("time")
 lonin = Element("geolon")
@@ -24,6 +35,11 @@ starin = Element("starpos")
 mout = Element("mooncoo")
 mdis = Element("moondis")
 hbutton = Element("convertbutton")
+refstar = Element("refstar")
+starcoo = Element("starcoo")
+
+populate_dropdowns(refstar.element)
+# starcoo.element = refstar.element
 
 hbutton.element.disabled = False
 
@@ -55,21 +71,24 @@ def convert():
         mout.write(f"Mondposition von {obsloc.lon:.3f} Länge {obsloc.lat:+.3f} Breite am "
                    f"{obstime} (UTC): {mooncoo.to_string('hmsdms', precision=2)}")
 
-    starcoo = None
-    try:
-        starstr = starin.element.value
-        if len(starstr.split()) == 2 and starstr.split()[1].find("d") > 0:
-            starcoo = coordinates.SkyCoord(starstr)
+    if len(starin.element.value.strip()) > 2:
+        starcoo = None
+        try:
+            starstr = starin.element.value
+            if len(starstr.split()) == 2 and starstr.split()[1].find("d") > 0:
+                starcoo = coordinates.SkyCoord(starstr)
+            else:
+                starcoo = coordinates.SkyCoord.from_name(starstr)
+        except NameResolveError:
+                mdis.write(f'Stern "{starstr}" ist nicht bekannt.')
+        except pyodide.ffi.JsException as e:  # NetworkError?
+                mdis.write(f'Keine Verbindung zu CDS für Suche nach "{starstr}" möglich: {e}')
+        except Exception as e:
+                mdis.write(f"Fehler in Sternposition für {starstr}: {e}")
         else:
-            starcoo = coordinates.SkyCoord.from_name(starstr)
-    except NameResolveError:
-            mdis.write(f'Stern "{starstr}" ist nicht bekannt.')
-    except pyodide.ffi.JsException as e:  # NetworkError?
-            mdis.write(f'Keine Verbindung zu CDS für Suche nach "{starstr}" möglich: {e}')
-    except Exception as e:
-            mdis.write(f"Fehler in Sternposition für {starstr}: {e}")
+            mdis.write(f"Sternposition {starcoo.to_string('hmsdms', precision=2)}")
     else:
-        mdis.write(f"Sternposition {starcoo.to_string('hmsdms', precision=2)}")
+        starcoo = coordinates.SkyCoord(refstar.element.value)
 
     if starcoo is not None:
         try:
