@@ -13,6 +13,7 @@ from astropy.time import Time
 from astropy.coordinates.name_resolve import NameResolveError
 from astropy.utils.exceptions import AstropyWarning
 from astropy.utils.iers.iers import IERSWarning
+from erfa.core import ErfaWarning
 
 import warnings
 
@@ -34,23 +35,18 @@ latin = Element("geolat")
 starin = Element("starpos")
 mout = Element("mooncoo")
 mdis = Element("moondis")
-hbutton = Element("convertbutton")
+ebutton = Element("ephembutton")
+dbutton = Element("distbutton")
 refstar = Element("refstar")
 starcoo = Element("starcoo")
 
 populate_dropdowns(refstar.element)
-# starcoo.element = refstar.element
 
-hbutton.element.disabled = False
+ebutton.element.disabled = False
+dbutton.element.disabled = False
 
-def convert():
-    try:
-        obstime = Time(f"{datein.element.value} {timein.element.value}")
-    except Exception as e:
-        mout.write(f"Fehler bei Datumseingabe: {e} \n{datein.element.value} {timein.element.value}")
-    else:
-        mout.write(f"Datum, Zeit: {datein.element.value} {timein.element.value} {obstime}")
 
+def ephem():
     try:
         obsloc = coordinates.EarthLocation.from_geodetic(lonin.element.value, latin.element.value)
     except Exception as e:
@@ -59,18 +55,31 @@ def convert():
     else:
         mout.write(f"Koordinaten: {obsloc.lon}, {obsloc.lat}")
 
-    try:
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=IERSWarning)
-            warnings.filterwarnings("ignore", message=".*IERS [dt]a.*", category=AstropyWarning)
-            mooncoo = coordinates.get_moon(obstime, obsloc, ephemeris='builtin')
-    except Exception as e:
-        mout.write(f"Fehler in Mondposition: {e} - Datum, Position: "
-                   f"{datein.element.value} {timein.element.value}; {lonin} {latin}")
-    else:
-        mout.write(f"Mondposition von {obsloc.lon:.3f} Länge {obsloc.lat:+.3f} Breite am "
+    with warnings.catch_warnings():
+        # Filter warnings about dates out of range (ERFA outside of range 1900-2100)
+        warnings.simplefilter("ignore", category=ErfaWarning)
+        try:
+            obstime = Time(f"{datein.element.value} {timein.element.value}")
+        except Exception as e:
+            mout.write(f"Fehler bei Datumseingabe: {e} \n{datein.element.value} {timein.element.value}")
+        else:
+            mout.write(f"Datum, Zeit: {datein.element.value} {timein.element.value} {obstime}")
+
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=IERSWarning)
+                warnings.filterwarnings("ignore", message=".*IERS [dt]a.*", category=AstropyWarning)
+                mooncoo = coordinates.get_moon(obstime, obsloc, ephemeris='builtin')
+        except Exception as e:
+            mout.write(f"Fehler in Mondposition: {e} - Datum, Position: "
+                       f"{datein.element.value} {timein.element.value}; {lonin} {latin}")
+        else:
+            mout.write(f"Mondposition von {obsloc.lon:.3f} Länge {obsloc.lat:+.3f} Breite am "
                    f"{obstime} (UTC): {mooncoo.to_string('hmsdms', precision=2)}")
 
+    return mooncoo
+
+def distanz(mooncoo):
     if len(starin.element.value.strip()) > 2:
         starcoo = None
         try:
@@ -92,7 +101,9 @@ def convert():
 
     if starcoo is not None:
         try:
-            moondis = mooncoo.separation(starcoo)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ErfaWarning)
+                moondis = mooncoo.separation(starcoo)
             mdis.write(f"Abstand zu Sternposition {starcoo.to_string('hmsdms', precision=1)}: "
                        f"    {moondis.to_string(precision=1)}")
         except Exception as e:
