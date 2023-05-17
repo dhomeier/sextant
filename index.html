@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Mondposition und Abstand zu Fixstern</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2023.03.1/pyscript.css" />
+    <script defer src="https://pyscript.net/releases/2023.03.1/pyscript.js"></script>
+</head>
+<body>
+    <h1>Mondposition und Abstandsbestimmung zu Fixstern</h1>
+
+    <h4>Datum und Zeit</h4>
+    <input id="date" type="date" value="2023-05-21" min="1723-02-17" max="2099-12-31" placeholder="Datum">
+    <input id="time" type="time" value="21:00:00" placeholder="Zeit">
+
+    <h4>Geographische Länge (O: +) und Breite (N: +)</h4>
+    <input id="geolon" type="number" value="9.93" placeholder="Länge">
+    <input id="geolat" type="number" value="53.53" placeholder="Breite">
+
+    <h4>Sternkoordinaten (Rektaszension Deklination)</h4>
+    <input id="starpos" type="string" value="04h35m55.24s +16d30m33.5s" placeholder="Aldebaran = 04h35m55s +16d30m">
+
+    <br><br>
+    <button id="convertbutton" py-click="convert()" disabled>Finde den Mond</button>
+    <br><br>
+
+    <span id="mooncoo">Noch keine Mondkoordinaten berechnet</span>
+    <br>
+    <span id="moondis">Noch keine Sternposition bestimmt</span>
+
+    <py-config src="./pyscript.toml"></py-config>
+    <py-script src="./sextant.py"></py-script>
+
+   <h4>Positions- und Abstandsbestimmung mit
+        <a href="https://docs.astropy.org/en/stable/coordinates/#getting-started">Astropy SkyCoord</a></h4>
+
+</body>
+</html>
